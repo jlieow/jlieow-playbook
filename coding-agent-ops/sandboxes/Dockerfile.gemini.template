@@ -1,0 +1,24 @@
+# Minimal Gemini CLI sandbox
+FROM node:20-bookworm
+
+# Install Gemini CLI
+RUN npm install -g @google/gemini-cli
+
+# --- Add project-specific dependencies below (e.g., Go, Terraform, Python, Rust) ---
+
+
+# --- End project-specific dependencies ---
+
+# Create non-root user
+RUN useradd -m -s /bin/bash agent \
+    && mkdir -p /home/agent/.gemini \
+    && chown -R agent:agent /home/agent
+
+# Set working directory
+WORKDIR /workspace
+
+# Switch to non-root user
+USER agent
+
+# Default command
+ENTRYPOINT ["gemini"]

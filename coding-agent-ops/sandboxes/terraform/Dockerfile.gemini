@@ -1,0 +1,33 @@
+# Use Node as the base for Gemini CLI
+FROM node:20-bookworm
+
+# 1. Install Go (must match go.mod: go 1.24.0)
+ENV GO_VERSION=1.24.0
+ARG TARGETARCH
+RUN curl -L https://go.dev/dl/go${GO_VERSION}.linux-${TARGETARCH}.tar.gz | tar -C /usr/local -xzf -
+ENV PATH=$PATH:/usr/local/go/bin:/root/go/bin
+
+# 2. Install Terraform
+RUN apt-get update && apt-get install -y gnupg software-properties-common curl \
+    && curl -fsSL https://apt.releases.hashicorp.com/gpg | gpg --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg \
+    && echo "deb [signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(lsb_release -cs) main" | tee /etc/apt/sources.list.d/hashicorp.list \
+    && apt-get update && apt-get install -y terraform \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
+
+# 3. Install Gemini CLI
+RUN npm install -g @google/gemini-cli
+
+# 4. Create non-root user
+RUN useradd -m -s /bin/bash agent \
+    && mkdir -p /home/agent/.gemini \
+    && chown -R agent:agent /home/agent
+ENV PATH=$PATH:/usr/local/go/bin:/home/agent/go/bin
+
+# Set working directory
+WORKDIR /workspace
+
+# Switch to non-root user
+USER agent
+
+# Default command
+ENTRYPOINT ["gemini"]
