@@ -1,8 +1,8 @@
 # Terraform Dev Sandboxes
 
-Claude Code and Gemini CLI sandboxes with Go and Terraform installed, tailored for Terraform provider development.
+These images extend the base coding agent sandboxes with Go and Terraform, tailored for Terraform provider development. The concept is the same — run the CLI inside a Docker container so the agent is isolated from your host system — but the image comes pre-loaded with the toolchain you need.
 
-## Build
+## 1. Build the image
 
 ### Claude
 
@@ -28,7 +28,7 @@ On Apple Silicon:
 docker build --platform linux/arm64 -f Dockerfile.gemini -t gemini-cli-tf:latest .
 ```
 
-## Run
+## 2. Launch the agent
 
 Authentication and run modes are the same as the base templates (see [parent readme](../readme.md)). Substitute the appropriate image tag (`claude-code-tf:latest` or `gemini-cli-tf:latest`).
 
@@ -74,6 +74,40 @@ docker run -it --rm \
   gemini-cli-tf:latest --yolo \
   "your prompt here"
 ```
+
+## 3. Create a shell shortcut
+
+Rather than typing the full `docker run` command each time, wrap it in a shell function. Add the following to your `~/.zshrc` (or `~/.bashrc`):
+
+```bash
+claudetf() {
+  docker run -it --rm \
+    --workdir $(pwd) \
+    -v $(pwd):$(pwd) \
+    -v ~/.claude/settings.json:/home/agent/.claude/settings.json:ro \
+    -v /Users/jerome.lieow/Documents/GitHub/terraform-provider-databricks/.git:/Users/jerome.lieow/Documents/GitHub/terraform-provider-databricks/.git \
+    -v /Users/jerome.lieow/Documents/GitHub/sandbox_workbricks/terraform/databricks_sandbox/local_provider:/local_provider \
+    -v ~/.terraformrc:/home/agent/.terraformrc \
+    claude-code-tf:latest --verbose --dangerously-skip-permissions "$@"
+}
+```
+
+Key flags:
+
+- `--workdir $(pwd)` and `-v $(pwd):$(pwd)` mount and set the working directory to the same absolute path as the host, so the agent sees identical paths.
+- The `.git` volume mount enables git operations inside worktree checkouts (see below).
+- The `local_provider` and `.terraformrc` mounts let Terraform use a locally-built provider binary instead of downloading from the registry.
+
+Reload your shell and run from any worktree directory:
+
+```bash
+source ~/.zshrc
+
+cd ~/Documents/GitHub/terraform-provider-databricks-fix-ignore-changes-computed
+claudetf
+```
+
+Pass extra arguments as needed, e.g. `claudetf --prompt "your prompt here"`.
 
 ## Git worktrees
 
